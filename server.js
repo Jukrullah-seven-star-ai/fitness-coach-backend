@@ -1,45 +1,36 @@
 const express = require('express');
-const bodyParser = require('body-parser');
 const cors = require('cors');
 const axios = require('axios');
 
 const app = express();
-app.use(bodyParser.json());
-app.use(cors());
+const port = process.env.PORT || 3000;
 
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+app.use(cors());
+app.use(express.json());
 
 app.post('/get-fitness-plan', async (req, res) => {
     const { age, weight, fitnessLevel, goals } = req.body;
-    const userPrompt = `Create a personalized fitness plan for a ${fitnessLevel} person who is ${age} years old, weighs ${weight} kg, and has the following goals: ${goals}. Include both workout and diet recommendations.`;
+    const prompt = `Create a personalized fitness plan for a ${age}-year-old, weighing ${weight}kg, with ${fitnessLevel} fitness level, aiming to ${goals}.`;
 
     try {
-        const response = await axios.post(
-            'https://openrouter.ai/api/v1/chat/completions',
-            {
-                model: 'qwen/qwen3-32b:free',
-                messages: [
-                    { role: 'user', content: userPrompt }
-                ]
-            },
-            {
-                headers: {
-                    Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-                    'Content-Type': 'application/json',
-                    'HTTP-Referer': 'https://your-site.com',
-                    'X-Title': 'AI Fitness Coach'
-                }
+        const response = await axios.post('https://openrouter.ai/api/v1/chat/completions', {
+            model: 'qwen-3',
+            messages: [{ role: 'user', content: prompt }]
+        }, {
+            headers: {
+                'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                'Content-Type': 'application/json'
             }
-        );
+        });
 
-        res.json({ plan: response.data.choices[0].message.content });
+        const plan = response.data.choices[0].message.content;
+        res.json({ plan });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'An error occurred while fetching the fitness plan.' });
+        res.status(500).json({ error: 'Failed to generate fitness plan' });
     }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+app.listen(port, () => {
+    console.log(`Server running on port ${port}`);
 });
